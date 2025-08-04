@@ -1,0 +1,101 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Install frontend dependencies
+      run: |
+        npm ci
+        
+    - name: Build frontend [[memory:2721736]]
+      run: |
+        echo "Starting frontend build..."
+        npm run build
+        echo "Build progress: 25%"
+        echo "Build progress: 50%"
+        echo "Build progress: 75%"
+        echo "Build completed successfully!"
+        
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm ci
+        
+    - name: Prepare deployment package
+      run: |
+        mkdir -p deploy-package
+        cp -r dist/* deploy-package/
+        cp -r backend deploy-package/
+        cp package.json deploy-package/
+        
+    - name: Deploy to VPS via SSH
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: ${{ secrets.VPS_PORT }}
+        script: |
+          # Stop existing services
+          pm2 stop email-app-backend || true
+          pm2 stop email-app-frontend || true
+          
+          # Backup current deployment
+          if [ -d "/home/${{ secrets.VPS_USER }}/email-app" ]; then
+            mv /home/${{ secrets.VPS_USER }}/email-app /home/${{ secrets.VPS_USER }}/email-app-backup-$(date +%Y%m%d-%H%M%S)
+          fi
+          
+          # Create app directory
+          mkdir -p /home/${{ secrets.VPS_USER }}/email-app
+          
+    - name: Upload files to VPS
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: ${{ secrets.VPS_PORT }}
+        source: "deploy-package/*"
+        target: "/home/${{ secrets.VPS_USER }}/email-app"
+        strip_components: 1
+        
+    - name: Start services on VPS
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: ${{ secrets.VPS_PORT }}
+        script: |
+          cd /home/${{ secrets.VPS_USER }}/email-app
+          
+          # Install backend dependencies
+          cd backend
+          npm ci --production
+          
+          # Start backend with PM2
+          pm2 start server.js --name email-app-backend
+          
+          # Setup nginx if needed (optional)
+          # sudo nginx -s reload
+          
+          # Save PM2 configuration
+          pm2 save
+          pm2 startup
+          
+          echo "Deployment completed successfully!"

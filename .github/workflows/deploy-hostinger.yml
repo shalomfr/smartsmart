@@ -1,0 +1,41 @@
+name: Deploy to Hostinger
+
+# מתי להריץ
+on:
+  workflow_dispatch:  # רק כשמפעילים ידנית
+  # push:
+  #   branches: [ main ]  # כל push ל-main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # 1. מוריד את הקוד
+    - uses: actions/checkout@v3
+    
+    # 2. מתקין Node.js
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    # 3. מתקין תלויות
+    - name: Install dependencies
+      run: |
+        npm install
+        cd backend && npm install
+    
+    # 4. בונה את האפליקציה
+    - name: Build frontend
+      run: npm run build
+    
+    # 5. פורס להוסטינגר (דרך FTP)
+    - name: Deploy to Hostinger
+      uses: SamKirkland/FTP-Deploy-Action@4.3.3
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./dist/
+        server-dir: public_html/

@@ -128,7 +128,8 @@ export default function InboxPage() {
   const handleSmartReply = async (email) => {
     try {
       const reply = await generateSmartReply(email);
-      navigate(`/Compose?replyTo=${email.id}&aiReply=${encodeURIComponent(reply)}`);
+      // מעביר גם את כתובת השולח וגם את הנושא
+      navigate(`/Compose?replyTo=${email.id}&replyFrom=${encodeURIComponent(email.from || '')}&replySubject=${encodeURIComponent(email.subject || '')}&aiReply=${encodeURIComponent(reply)}`);
     } catch (error) {
       alert('שגיאה ביצירת תשובה: ' + error.message);
     }

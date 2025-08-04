@@ -52,14 +52,16 @@ export default function ComposePage() {
     // Check if replying to an email
     const urlParams = new URLSearchParams(location.search);
     const replyTo = urlParams.get('replyTo');
+    const replyFrom = urlParams.get('replyFrom');
+    const replySubject = urlParams.get('replySubject');
     const aiReply = urlParams.get('aiReply');
     
     if (replyTo) {
-      // Would load the original email and populate fields
+      // Load the reply data
       setEmail(prev => ({
         ...prev,
-        subject: `Re: ${replyTo}`,
-        to: ['original@sender.com'],
+        subject: replySubject ? `Re: ${decodeURIComponent(replySubject)}` : `Re: ${replyTo}`,
+        to: replyFrom ? [decodeURIComponent(replyFrom)] : [],
         body: aiReply ? decodeURIComponent(aiReply) : ''
       }));
     }
@@ -77,15 +79,18 @@ export default function ComposePage() {
 
   const handleSend = async () => {
     if (!email.to.length || !email.subject.trim() || !email.body.trim()) {
-      // In a real app, you'd show a user-friendly error message
-      alert('Please fill in To, Subject, and Body fields.');
+      // בדיקת שדות חובה
+      alert('אנא מלא את שדות הנמען, הנושא ותוכן ההודעה.');
       return;
     }
 
     setIsSending(true);
     try {
+      // קח את כתובת השולח מהחשבון השמור
+      const userEmail = localStorage.getItem('emailAccount') || 'user@example.com';
+      
       await Email.create({
-        from: 'user@example.com',
+        from: userEmail,
         from_name: 'אני',
         to: email.to,
         cc: email.cc || [],
@@ -101,7 +106,7 @@ export default function ComposePage() {
       navigate('/Inbox?folder=sent');
     } catch (error) {
       console.error('Error sending email:', error);
-      alert('Failed to send email. Please try again.');
+      alert('שגיאה בשליחת המייל. אנא נסה שוב.');
     } finally {
       setIsSending(false);
     }

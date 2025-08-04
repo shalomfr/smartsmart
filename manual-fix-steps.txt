@@ -1,0 +1,67 @@
+========================================
+   הוראות ידניות לתיקון השרת
+========================================
+
+שלב 1: פתח טרמינל חדש (CMD או PowerShell)
+
+שלב 2: התחבר לשרת:
+ssh root@31.97.129.5
+
+שלב 3: אחרי שהתחברת, העתק והדבק כל פקודה בנפרד:
+
+# עבור לתיקיית המשתמש
+cd /home/emailapp
+
+# בדוק מה יש בתיקייה
+ls -la
+
+# אם יש תיקיית email-app, מחק אותה
+rm -rf email-app
+
+# הורד מחדש מגיטהאב
+git clone https://github.com/shalomfr/smartsmart.git email-app
+
+# כנס לתיקייה
+cd email-app
+
+# התקן תלויות של ה-frontend
+npm install
+
+# בנה את ה-frontend
+npm run build
+
+# כנס לתיקיית backend
+cd backend
+
+# התקן תלויות של ה-backend
+npm install
+
+# צור קובץ הגדרות
+echo "PORT=3001" > .env
+
+# חזור לתיקייה הראשית
+cd ..
+
+# עצור את כל התהליכים הישנים
+pm2 stop all
+pm2 delete all
+
+# הפעל את ה-backend
+cd backend
+pm2 start server.js --name email-app-backend
+
+# חזור לתיקייה הראשית
+cd ..
+
+# הפעל את ה-frontend
+pm2 serve dist 8080 --name email-app-frontend --spa
+
+# שמור את ההגדרות
+pm2 save
+
+# בדוק שהכל עובד
+pm2 status
+
+========================================
+אם משהו נכשל, שלח לי את השגיאה!
+========================================

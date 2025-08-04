@@ -362,8 +362,9 @@ export default function InboxPage() {
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => handleSmartReply(selectedEmail)}
+                        onClick={() => selectedEmail && handleSmartReply(selectedEmail)}
                         className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                        disabled={!selectedEmail}
                       >
                         <Zap className="w-4 h-4 ml-1" />
                         <span className="text-sm">תשובה חכמה</span>
@@ -479,8 +480,8 @@ export default function InboxPage() {
                         
                         <Button
                           variant="outline"
-                          onClick={() => handleSmartReply(selectedEmail)}
-                          disabled={isGeneratingReply}
+                          onClick={() => selectedEmail && handleSmartReply(selectedEmail)}
+                          disabled={isGeneratingReply || !selectedEmail}
                         >
                           <Zap className="w-4 h-4 ml-2" />
                           צור תשובה חדשה

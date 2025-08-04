@@ -5,6 +5,9 @@ const Imap = require('imap');
 const { simpleParser } = require('mailparser');
 const nodemailer = require('nodemailer');
 const axios = require('axios');
+const crypto = require('crypto');
+const fs = require('fs').promises;
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -551,6 +554,105 @@ app.post('/api/claude/improve-email', async (req, res) => {
 });
 
 
+// ============= SETTINGS API - שמירת הגדרות מוצפנות =============
+const SETTINGS_FILE = path.join(__dirname, 'settings.encrypted');
+const ALGORITHM = 'aes-256-gcm';
+
+// פונקציות הצפנה
+function encryptSettings(settings, masterPassword) {
+  const salt = crypto.randomBytes(32);
+  const key = crypto.pbkdf2Sync(masterPassword, salt, 100000, 32, 'sha256');
+  const iv = crypto.randomBytes(16);
+  
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  
+  let encrypted = cipher.update(JSON.stringify(settings), 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  
+  const authTag = cipher.getAuthTag();
+  
+  return {
+    salt: salt.toString('hex'),
+    iv: iv.toString('hex'),
+    authTag: authTag.toString('hex'),
+    encrypted
+  };
+}
+
+function decryptSettings(encryptedData, masterPassword) {
+  try {
+    const salt = Buffer.from(encryptedData.salt, 'hex');
+    const key = crypto.pbkdf2Sync(masterPassword, salt, 100000, 32, 'sha256');
+    const iv = Buffer.from(encryptedData.iv, 'hex');
+    const authTag = Buffer.from(encryptedData.authTag, 'hex');
+    
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+    
+    let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    
+    return JSON.parse(decrypted);
+  } catch (error) {
+    throw new Error('Invalid master password');
+  }
+}
+
+// שמירת הגדרות
+app.post('/api/settings/save', async (req, res) => {
+  try {
+    const { settings, masterPassword } = req.body;
+    
+    if (!masterPassword || masterPassword.length < 8) {
+      return res.status(400).json({ 
+        error: 'סיסמת מאסטר חייבת להיות לפחות 8 תווים' 
+      });
+    }
+    
+    const encrypted = encryptSettings(settings, masterPassword);
+    await fs.writeFile(SETTINGS_FILE, JSON.stringify(encrypted, null, 2));
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Save settings error:', error);
+    res.status(500).json({ error: 'שגיאה בשמירת הגדרות' });
+  }
+});
+
+// טעינת הגדרות
+app.post('/api/settings/load', async (req, res) => {
+  try {
+    const { masterPassword } = req.body;
+    
+    // בדוק אם קיים קובץ הגדרות
+    try {
+      await fs.access(SETTINGS_FILE);
+    } catch {
+      return res.json({ settings: null, exists: false });
+    }
+    
+    const encryptedData = JSON.parse(await fs.readFile(SETTINGS_FILE, 'utf8'));
+    const settings = decryptSettings(encryptedData, masterPassword);
+    
+    res.json({ settings, exists: true });
+  } catch (error) {
+    if (error.message.includes('Invalid master password')) {
+      res.status(401).json({ error: 'סיסמת מאסטר שגויה' });
+    } else {
+      res.status(500).json({ error: 'שגיאה בטעינת הגדרות' });
+    }
+  }
+});
+
+// בדוק אם קיימות הגדרות
+app.get('/api/settings/exists', async (req, res) => {
+  try {
+    await fs.access(SETTINGS_FILE);
+    res.json({ exists: true });
+  } catch {
+    res.json({ exists: false });
+  }
+});
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

@@ -11,9 +11,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CheckCircle, AlertCircle, Shield, Wifi, Server, Lock, 
   Globe, Smartphone, Monitor, Settings as SettingsIcon, Send,
-  Bell, Eye, Zap, Clock, Mail, User, Search
+  Bell, Eye, Zap, Clock, Mail, User, Search, Cloud, Download
 } from 'lucide-react';
 import { detectEmailProvider, formatProviderInfo } from '../utils/emailProviders';
+import { saveSettings, loadSettings, checkSettingsExist } from '../api/settingsAPI';
 
 export default function SettingsPage() {
   const [account, setAccount] = useState({});
@@ -33,10 +34,22 @@ export default function SettingsPage() {
   const [detectedProvider, setDetectedProvider] = useState(null);
   const [showProviderInfo, setShowProviderInfo] = useState(false);
   const [claudeApiKey, setClaudeApiKey] = useState(localStorage.getItem('claudeApiKey') || '');
+  
+  // States for server settings
+  const [masterPassword, setMasterPassword] = useState('');
+  const [showMasterDialog, setShowMasterDialog] = useState(false);
+  const [saveMode, setSaveMode] = useState(false); // true = save, false = load
+  const [settingsExist, setSettingsExist] = useState(false);
 
   useEffect(() => {
     loadAccount();
+    checkServerSettings();
   }, []);
+  
+  const checkServerSettings = async () => {
+    const exists = await checkSettingsExist();
+    setSettingsExist(exists);
+  };
 
   const loadAccount = async () => {
     setIsLoading(true);
@@ -146,6 +159,62 @@ export default function SettingsPage() {
         alert('שגיאה בשמירת ההגדרות');
     } finally {
         setIsSaving(false);
+    }
+  };
+  
+  // Server save/load functions
+  const handleSaveToServer = async () => {
+    setSaveMode(true);
+    setShowMasterDialog(true);
+  };
+
+  const handleLoadFromServer = async () => {
+    setSaveMode(false);
+    setShowMasterDialog(true);
+  };
+
+  const handleMasterPasswordSubmit = async () => {
+    try {
+      if (saveMode) {
+        // שמור הגדרות
+        const settings = {
+          email: account.email_address || '',
+          password: account.password || '',
+          imapServer: account.imap_server || '',
+          imapPort: account.imap_port || '',
+          smtpServer: account.smtp_server || '',
+          smtpPort: account.smtp_port || '',
+          claudeApiKey: claudeApiKey || ''
+        };
+        
+        await saveSettings(settings, masterPassword);
+        alert('ההגדרות נשמרו בהצלחה בשרת! 🎉');
+        setSettingsExist(true);
+      } else {
+        // טען הגדרות
+        const result = await loadSettings(masterPassword);
+        if (result.settings) {
+          setAccount(prev => ({
+            ...prev,
+            email_address: result.settings.email || '',
+            password: result.settings.password || '',
+            imap_server: result.settings.imapServer || '',
+            imap_port: result.settings.imapPort || '',
+            smtp_server: result.settings.smtpServer || '',
+            smtp_port: result.settings.smtpPort || ''
+          }));
+          if (result.settings.claudeApiKey) {
+            setClaudeApiKey(result.settings.claudeApiKey);
+            localStorage.setItem('claudeApiKey', result.settings.claudeApiKey);
+          }
+          alert('ההגדרות נטענו בהצלחה! 🎉');
+        }
+      }
+      
+      setShowMasterDialog(false);
+      setMasterPassword('');
+    } catch (error) {
+      alert('שגיאה: ' + error.message);
     }
   };
 
@@ -567,6 +636,38 @@ export default function SettingsPage() {
                   )}
                 </Button>
               </motion.div>
+              
+              {/* כפתורי שמירה וטעינה מהשרת */}
+              <div className="flex gap-2 mr-4">
+                <motion.div
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button 
+                    onClick={handleSaveToServer}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <Cloud className="w-4 h-4" />
+                    שמור בשרת
+                  </Button>
+                </motion.div>
+                
+                <motion.div
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button 
+                    onClick={handleLoadFromServer}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    disabled={!settingsExist}
+                  >
+                    <Download className="w-4 h-4" />
+                    {settingsExist ? 'טען מהשרת' : 'אין הגדרות שמורות'}
+                  </Button>
+                </motion.div>
+              </div>
             </CardFooter>
           </Card>
         </motion.div>
@@ -790,6 +891,55 @@ export default function SettingsPage() {
           </Card>
         </motion.div>
       </div>
+      
+      {/* דיאלוג סיסמת מאסטר */}
+      {showMasterDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div 
+            className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.2 }}
+          >
+            <h3 className="text-lg font-bold mb-4">
+              {saveMode ? 'הגדר סיסמת מאסטר לשמירת ההגדרות' : 'הכנס סיסמת מאסטר לטעינת ההגדרות'}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {saveMode 
+                ? 'סיסמה זו תאפשר לך לטעון את ההגדרות מכל מחשב'
+                : 'הכנס את הסיסמה שהגדרת בעת שמירת ההגדרות'
+              }
+            </p>
+            <Input
+              type="password"
+              value={masterPassword}
+              onChange={(e) => setMasterPassword(e.target.value)}
+              placeholder="סיסמת מאסטר (לפחות 8 תווים)"
+              className="mb-4"
+              onKeyPress={(e) => e.key === 'Enter' && masterPassword.length >= 8 && handleMasterPasswordSubmit()}
+            />
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleMasterPasswordSubmit}
+                disabled={masterPassword.length < 8}
+                className="flex-1"
+              >
+                {saveMode ? 'שמור' : 'טען'}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowMasterDialog(false);
+                  setMasterPassword('');
+                }}
+                className="flex-1"
+              >
+                ביטול
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

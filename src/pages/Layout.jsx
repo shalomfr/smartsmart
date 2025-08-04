@@ -79,7 +79,7 @@ export default function Layout({ children, currentPageName }) {
 
   const SidebarContent = () => (
     <motion.div 
-      className="flex flex-col h-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-gray-800 backdrop-blur-sm overflow-y-auto"
+      className="flex flex-col h-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-gray-800 backdrop-blur-sm"
       variants={sidebarVariants}
       initial="closed"
       animate="open"
@@ -167,7 +167,6 @@ export default function Layout({ children, currentPageName }) {
       {/* Combined Navigation with Scroll */}
       <motion.nav 
         className="px-2 mb-4 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
-        style={{ maxHeight: 'calc(100vh - 350px)' }}
         variants={itemVariants}
       >
         {/* Folders Section */}
@@ -343,7 +342,7 @@ export default function Layout({ children, currentPageName }) {
   );
 
   return (
-    <div className="h-screen w-full flex bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/50" dir="rtl">
+    <div className="min-h-screen h-full w-full flex bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/50 overflow-hidden" dir="rtl">
       {/* Mobile Sidebar */}
       <AnimatePresence>
         {isSidebarOpen && (

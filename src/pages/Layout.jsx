@@ -79,7 +79,7 @@ export default function Layout({ children, currentPageName }) {
 
   const SidebarContent = () => (
     <motion.div 
-      className="flex flex-col h-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-gray-800 backdrop-blur-sm overflow-y-auto"
+      className="flex flex-col h-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-gray-800 backdrop-blur-sm overflow-y-auto max-h-screen"
       variants={sidebarVariants}
       initial="closed"
       animate="open"
@@ -109,23 +109,33 @@ export default function Layout({ children, currentPageName }) {
               <p className="text-xs text-gray-500">מערכת ניהול מיילים</p>
             </div>
           </motion.div>
-          {notifications > 0 && (
-            <motion.div
-              className="relative"
-              animate={{ scale: [1, 1.2, 1], rotate: [0, 5, -5, 0] }}
-              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-            >
-              <Bell className="w-5 h-5 text-gray-600" />
-              <motion.span 
-                className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 500, delay: 0.2 }}
+          <div className="flex items-center gap-3">
+            {notifications > 0 && (
+              <motion.div
+                className="relative"
+                animate={{ scale: [1, 1.2, 1], rotate: [0, 5, -5, 0] }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
               >
-                {notifications}
-              </motion.span>
-            </motion.div>
-          )}
+                <Bell className="w-5 h-5 text-gray-600" />
+                <motion.span 
+                  className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 500, delay: 0.2 }}
+                >
+                  {notifications}
+                </motion.span>
+              </motion.div>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </motion.div>
 
@@ -240,7 +250,7 @@ export default function Layout({ children, currentPageName }) {
       </motion.nav>
 
       {/* Other Pages - MOVED DOWN */}
-      <motion.nav className="px-2 mb-4 flex-1 overflow-y-auto" variants={itemVariants}>
+      <motion.nav className="px-2 mb-4 flex-1 overflow-y-auto min-h-0" variants={itemVariants}>
         <p className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wider px-3 flex items-center gap-2">
           <Settings className="w-4 h-4" />
           כלים ותכונות

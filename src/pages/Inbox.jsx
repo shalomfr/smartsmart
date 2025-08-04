@@ -7,11 +7,12 @@ import { Checkbox } from "../components/ui/checkbox";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
+import { Textarea } from "../components/ui/textarea";
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Star, Trash2, Archive, RefreshCw, Filter, SortAsc,
   Clock, Paperclip, Flag, Eye, EyeOff, MoreHorizontal, Reply,
-  Forward, Download, Zap, ClipboardCheck, X, Mail
+  Forward, Download, Zap, ClipboardCheck, X, Mail, Send, Loader2
 } from 'lucide-react';
 import { generateSmartReply } from '../api/claudeAPI';
 import { format } from 'date-fns';
@@ -77,6 +78,10 @@ export default function InboxPage() {
   const [selectedEmail, setSelectedEmail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showReplyPanel, setShowReplyPanel] = useState(false);
+  const [replyContent, setReplyContent] = useState('');
+  const [isGeneratingReply, setIsGeneratingReply] = useState(false);
+  const [isSendingReply, setIsSendingReply] = useState(false);
   
   const searchParams = new URLSearchParams(location.search);
   const folder = searchParams.get('folder') || 'inbox';
@@ -126,12 +131,60 @@ export default function InboxPage() {
   };
 
   const handleSmartReply = async (email) => {
+    setShowReplyPanel(true);
+    setIsGeneratingReply(true);
+    setReplyContent('');
+    
     try {
-      const reply = await generateSmartReply(email);
-      // מעביר גם את כתובת השולח וגם את הנושא
-      navigate(`/Compose?replyTo=${email.id}&replyFrom=${encodeURIComponent(email.from || '')}&replySubject=${encodeURIComponent(email.subject || '')}&aiReply=${encodeURIComponent(reply)}`);
+      // שולח את כל פרטי המייל כולל התוכן המלא
+      const emailData = {
+        from: email.from,
+        subject: email.subject,
+        body: email.body || email.preview || '',
+        date: email.date
+      };
+      
+      console.log('Sending email data to AI:', emailData);
+      const reply = await generateSmartReply(emailData);
+      setReplyContent(reply);
     } catch (error) {
       alert('שגיאה ביצירת תשובה: ' + error.message);
+      setShowReplyPanel(false);
+    } finally {
+      setIsGeneratingReply(false);
+    }
+  };
+  
+  const handleSendReply = async () => {
+    if (!replyContent.trim()) return;
+    
+    setIsSendingReply(true);
+    try {
+      const userEmail = localStorage.getItem('emailAccount') || 'user@example.com';
+      
+      await Email.create({
+        from: userEmail,
+        from_name: 'אני',
+        to: [selectedEmail.from],
+        subject: `Re: ${selectedEmail.subject}`,
+        body: replyContent,
+        date: new Date().toISOString(),
+        folder: 'sent',
+        is_read: true
+      });
+      
+      // נקה והסתר את הפאנל
+      setShowReplyPanel(false);
+      setReplyContent('');
+      alert('התשובה נשלחה בהצלחה!');
+      
+      // רענן את הרשימה
+      loadEmails();
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      alert('שגיאה בשליחת התשובה: ' + error.message);
+    } finally {
+      setIsSendingReply(false);
     }
   };
 
@@ -361,6 +414,82 @@ export default function InboxPage() {
                   dangerouslySetInnerHTML={{ __html: selectedEmail.body }}
                 />
               </motion.div>
+              
+              {/* פאנל תשובה חכמה */}
+              <AnimatePresence>
+                {showReplyPanel && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-6 border-t pt-6"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Reply className="w-5 h-5" />
+                        תשובה אל: {selectedEmail.from}
+                      </h3>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setShowReplyPanel(false);
+                          setReplyContent('');
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <Textarea
+                        value={replyContent}
+                        onChange={(e) => setReplyContent(e.target.value)}
+                        placeholder={isGeneratingReply ? "AI יוצר תשובה חכמה..." : "כתוב את התשובה שלך..."}
+                        className="min-h-[200px] resize-none"
+                        disabled={isGeneratingReply}
+                      />
+                      
+                      {isGeneratingReply && (
+                        <div className="flex items-center gap-2 text-blue-600">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>AI קורא את המייל ומכין תשובה מותאמת...</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleSendReply}
+                          disabled={!replyContent.trim() || isSendingReply}
+                          className="flex items-center gap-2"
+                        >
+                          {isSendingReply ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              שולח...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-4 h-4" />
+                              שלח תשובה
+                            </>
+                          )}
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          onClick={() => handleSmartReply(selectedEmail)}
+                          disabled={isGeneratingReply}
+                        >
+                          <Zap className="w-4 h-4 ml-2" />
+                          צור תשובה חדשה
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           ) : (
             <motion.div 

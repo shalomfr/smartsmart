@@ -1,0 +1,47 @@
+=============================================
+פתרון ידני לשגיאת 500
+=============================================
+
+1. התחבר לשרת:
+ssh root@31.97.129.5
+
+2. בדוק מה קורה:
+pm2 status
+
+3. אם אין תהליכים או שהם במצב error:
+pm2 delete all
+
+4. התקן מחדש:
+cd /home/emailapp/email-app
+git pull
+npm install
+npm run build
+
+5. התקן backend:
+cd backend
+npm install
+
+6. הפעל הכל מחדש:
+cd /home/emailapp/email-app/backend
+pm2 start server.js --name email-app-backend
+
+cd /home/emailapp/email-app
+pm2 serve dist 8080 --name email-app-frontend --spa
+
+7. שמור ובדוק:
+pm2 save
+pm2 status
+
+8. רענן nginx:
+nginx -s reload
+
+=============================================
+סיבות נפוצות לשגיאת 500:
+=============================================
+1. תיקיית dist לא קיימת - npm run build
+2. PM2 קרס - pm2 restart all
+3. nginx לא מוגדר נכון - בדוק /etc/nginx/sites-available/email-app
+4. אין הרשאות - chmod 755 /home/emailapp/email-app/dist
+5. Node modules חסרים - npm install
+
+=============================================

@@ -432,6 +432,17 @@ app.post('/api/claude/smart-reply', async (req, res) => {
   const baseSystemPrompt = 'אתה עוזר דואר אלקטרוני שכותב תשובות מקצועיות אך ידידותיות. התאם את השפה לשפת המייל המקורי.';
   const systemPrompt = buildSystemPrompt(customSystemPrompt, baseSystemPrompt, settings);
 
+  // בניית תוכן המייל המלא
+  let fullEmailContent = '';
+  if (typeof emailContent === 'object') {
+    fullEmailContent = `מאת: ${emailContent.from || 'Unknown'}\n`;
+    fullEmailContent += `נושא: ${emailContent.subject || 'No Subject'}\n`;
+    fullEmailContent += `תאריך: ${emailContent.date || 'Unknown'}\n\n`;
+    fullEmailContent += `תוכן המייל:\n${emailContent.body || 'No content'}`;
+  } else {
+    fullEmailContent = emailContent;
+  }
+
   try {
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
       model: 'claude-3-haiku-20240307',
@@ -440,7 +451,7 @@ app.post('/api/claude/smart-reply', async (req, res) => {
       messages: [
         {
           role: 'user',
-          content: `כתוב תשובה ${settings?.tone === 'formal' ? 'פורמלית' : settings?.tone === 'friendly' ? 'ידידותית' : 'מקצועית'} למייל הזה:\n\n${emailContent}`
+          content: `כתוב תשובה ${settings?.tone === 'formal' ? 'פורמלית' : settings?.tone === 'friendly' ? 'ידידותית' : 'מקצועית'} למייל הזה:\n\n${fullEmailContent}`
         }
       ],
       system: systemPrompt

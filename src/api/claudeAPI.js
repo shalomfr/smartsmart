@@ -1,6 +1,6 @@
 // Claude AI API Integration
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = '/api';
 
 // Get API key from localStorage
 const getClaudeApiKey = () => localStorage.getItem('claudeApiKey');

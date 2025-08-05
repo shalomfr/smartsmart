@@ -5,9 +5,10 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import {
   Mail, Edit, Send, Star, Trash2, Archive, Inbox, Settings, Menu, X, User, Search,
-  Bell, Plus, Filter, SortAsc, RefreshCw, Zap, Calendar, Users, FolderOpen, Tag, ClipboardCheck, Brain
+  Bell, Plus, Filter, SortAsc, RefreshCw, Zap, Calendar, Users, FolderOpen, Tag, ClipboardCheck, Brain, LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../contexts/AuthContext';
 
 
 const folders = [
@@ -63,6 +64,12 @@ export default function Layout({ children, currentPageName }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [notifications] = useState(3);
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const isActive = (page, folder) => {
     const searchParams = new URLSearchParams(location.search);
@@ -327,8 +334,8 @@ export default function Layout({ children, currentPageName }) {
             <User className="w-8 h-8 p-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full" />
           </motion.div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-900 text-sm truncate">משתמש</p>
-            <p className="text-xs text-gray-500 truncate">user@example.com</p>
+            <p className="font-semibold text-gray-900 text-sm truncate">{user?.name || 'משתמש'}</p>
+            <p className="text-xs text-gray-500 truncate">{user?.username || 'user@example.com'}</p>
           </div>
           <motion.div
             animate={{ opacity: [0.5, 1, 0.5] }}
@@ -337,6 +344,15 @@ export default function Layout({ children, currentPageName }) {
             <div className="w-2 h-2 bg-green-500 rounded-full"></div>
           </motion.div>
         </motion.div>
+        
+        <Button
+          onClick={handleLogout}
+          variant="ghost"
+          className="w-full flex items-center gap-3 px-3 py-3 mt-2 text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-300"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="font-medium">התנתק</span>
+        </Button>
       </motion.div>
     </motion.div>
   );

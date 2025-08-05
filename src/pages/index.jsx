@@ -18,6 +18,10 @@ import Search from "./Search";
 
 import AITraining from "./AITraining";
 
+import Login from "./Login";
+
+import ProtectedRoute from "../components/ProtectedRoute";
+
 import { HashRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -60,30 +64,79 @@ function PagesContent() {
     const location = useLocation();
     const currentPage = _getCurrentPage(location.pathname);
     
+    // אם אנחנו בעמוד הכניסה, לא נציג את ה-Layout
+    if (location.pathname === '/login') {
+        return (
+            <Routes>
+                <Route path="/login" element={<Login />} />
+            </Routes>
+        );
+    }
+    
     return (
         <Layout currentPageName={currentPage}>
             <Routes>            
+                <Route path="/" element={
+                    <ProtectedRoute>
+                        <Inbox />
+                    </ProtectedRoute>
+                } />
                 
-                    <Route path="/" element={<Inbox />} />
+                <Route path="/login" element={<Login />} />
                 
+                <Route path="/Inbox" element={
+                    <ProtectedRoute>
+                        <Inbox />
+                    </ProtectedRoute>
+                } />
                 
-                <Route path="/Inbox" element={<Inbox />} />
+                <Route path="/Settings" element={
+                    <ProtectedRoute>
+                        <Settings />
+                    </ProtectedRoute>
+                } />
                 
-                <Route path="/Settings" element={<Settings />} />
+                <Route path="/Compose" element={
+                    <ProtectedRoute>
+                        <Compose />
+                    </ProtectedRoute>
+                } />
                 
-                <Route path="/Compose" element={<Compose />} />
+                <Route path="/Contacts" element={
+                    <ProtectedRoute>
+                        <Contacts />
+                    </ProtectedRoute>
+                } />
                 
-                <Route path="/Contacts" element={<Contacts />} />
+                <Route path="/Tasks" element={
+                    <ProtectedRoute>
+                        <Tasks />
+                    </ProtectedRoute>
+                } />
                 
-                <Route path="/Tasks" element={<Tasks />} />
+                <Route path="/Rules" element={
+                    <ProtectedRoute>
+                        <Rules />
+                    </ProtectedRoute>
+                } />
                 
-                <Route path="/Rules" element={<Rules />} />
+                <Route path="/SmartFeatures" element={
+                    <ProtectedRoute>
+                        <SmartFeatures />
+                    </ProtectedRoute>
+                } />
                 
-                <Route path="/SmartFeatures" element={<SmartFeatures />} />
+                <Route path="/Search" element={
+                    <ProtectedRoute>
+                        <Search />
+                    </ProtectedRoute>
+                } />
                 
-                <Route path="/Search" element={<Search />} />
-                
-                <Route path="/AITraining" element={<AITraining />} />
+                <Route path="/AITraining" element={
+                    <ProtectedRoute>
+                        <AITraining />
+                    </ProtectedRoute>
+                } />
                 
             </Routes>
         </Layout>

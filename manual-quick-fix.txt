@@ -1,0 +1,47 @@
+=============================================
+תיקון ידני מהיר ל-500
+=============================================
+
+העתק והדבק בטרמינל:
+
+ssh root@31.97.129.5
+
+אחרי שהתחברת, הרץ את כל זה בבת אחת:
+
+pm2 delete all && cd /home/emailapp/email-app && npm run build && cd backend && echo "PORT=3002" > .env && pm2 start server.js --name email-app-backend && cd .. && pm2 serve dist 8080 --name email-app-frontend --spa && pm2 save && pm2 status
+
+=============================================
+או שורה אחרי שורה:
+=============================================
+
+1. מחק תהליכים ישנים:
+pm2 delete all
+
+2. עבור לתיקייה:
+cd /home/emailapp/email-app
+
+3. בנה את ה-frontend:
+npm run build
+
+4. עבור ל-backend:
+cd backend
+
+5. הגדר פורט חדש:
+echo "PORT=3002" > .env
+
+6. הפעל backend:
+pm2 start server.js --name email-app-backend
+
+7. חזור לתיקייה ראשית:
+cd ..
+
+8. הפעל frontend:
+pm2 serve dist 8080 --name email-app-frontend --spa
+
+9. שמור:
+pm2 save
+
+10. בדוק:
+pm2 status
+
+=============================================

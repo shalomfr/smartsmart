@@ -17,6 +17,47 @@ app.use(express.json());
 // Store user sessions (in production, use Redis or database)
 const sessions = new Map();
 
+// משתמשים לדוגמה - בסביבת production יש לשמור במסד נתונים מאובטח
+const APP_USERS = [
+  {
+    username: 'admin',
+    password: '123456', // בסביבת production יש להשתמש בהצפנה!
+    name: 'מנהל המערכת'
+  },
+  {
+    username: 'user1',
+    password: 'password',
+    name: 'משתמש לדוגמה'
+  }
+];
+
+// Login endpoint for the application (not email)
+app.post('/api/app/login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  // מחפש את המשתמש
+  const user = APP_USERS.find(u => u.username === username && u.password === password);
+  
+  if (user) {
+    // יצירת token פשוט (בסביבת production יש להשתמש ב-JWT)
+    const token = Math.random().toString(36).substring(7);
+    
+    res.json({
+      success: true,
+      user: {
+        username: user.username,
+        name: user.name
+      },
+      token: token
+    });
+  } else {
+    res.status(401).json({
+      success: false,
+      message: 'שם משתמש או סיסמה שגויים'
+    });
+  }
+});
+
 // Helper function to create IMAP connection
 function createImapConnection(email, password, imapServer, imapPort) {
   return new Imap({
@@ -665,7 +706,7 @@ app.get('/api/settings/exists', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3003;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log('Ready to connect to real email accounts!');

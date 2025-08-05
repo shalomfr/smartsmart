@@ -142,27 +142,34 @@ echo.
 echo echo "Deployment completed!"
 ) > deploy-vps-temp.sh
 
+REM Convert to Unix format and upload
+echo Converting script to Unix format...
+powershell -Command "(Get-Content deploy-vps-temp.sh) -replace '`r`n', '`n' | Set-Content -NoNewline deploy-vps-temp-unix.sh"
+
 REM Upload and execute on VPS
 echo Uploading script to VPS...
-scp deploy-vps-temp.sh %VPS_USER%@%VPS_HOST%:/tmp/deploy-script.sh
+scp deploy-vps-temp-unix.sh %VPS_USER%@%VPS_HOST%:/tmp/deploy-script.sh
 if errorlevel 1 (
     echo [ERROR] Failed to upload script to VPS!
     del deploy-vps-temp.sh
+    del deploy-vps-temp-unix.sh
     pause
     exit /b 1
 )
 
 echo Executing deployment on VPS...
-ssh %VPS_USER%@%VPS_HOST% "bash /tmp/deploy-script.sh && rm /tmp/deploy-script.sh"
+ssh %VPS_USER%@%VPS_HOST% "chmod +x /tmp/deploy-script.sh && bash /tmp/deploy-script.sh && rm /tmp/deploy-script.sh"
 if errorlevel 1 (
     echo [ERROR] Deployment on VPS failed!
     del deploy-vps-temp.sh
+    del deploy-vps-temp-unix.sh
     pause
     exit /b 1
 )
 
 REM Cleanup
 del deploy-vps-temp.sh
+del deploy-vps-temp-unix.sh
 
 echo.
 echo ===================================

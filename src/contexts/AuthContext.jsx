@@ -28,7 +28,13 @@ export function AuthProvider({ children }) {
   // פונקציית כניסה
   const login = async (username, password) => {
     try {
-      const response = await fetch('http://localhost:3001/api/app/login', {
+      // אם אתה בסביבת פיתוח מקומית, השתמש ב-localhost
+      // אם אתה בשרת, החלף ל-IP של השרת
+      const API_URL = window.location.hostname === 'localhost' 
+        ? 'http://localhost:3001' 
+        : 'http://31.97.129.5/api';
+      
+      const response = await fetch(`${API_URL}/app/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

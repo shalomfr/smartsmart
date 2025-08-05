@@ -10,8 +10,17 @@
 
 ### 1. פריסה מלאה (Windows)
 ```bash
-# באמצעות Batch
+# הסקריפט הראשי (מתוקן לבעיית line endings)
 deploy-to-github-and-vps.bat
+
+# פריסה ישירה (ללא קבצים זמניים)
+deploy-direct.bat
+
+# פריסה בטוחה (עם בדיקות נוספות)
+deploy-safe.bat
+
+# פריסה מהירה
+quick-deploy.bat
 
 # באמצעות PowerShell
 .\deploy-complete.ps1
@@ -87,6 +96,18 @@ ssh root@31.97.129.5 "systemctl status nginx"
 ```
 
 ## בעיות נפוצות ופתרונות
+
+### בעיית Line Endings (שגיאת '\r')
+אם אתה רואה שגיאות כמו:
+```
+/tmp/deploy-script.sh: line 2: $'\r': command not found
+```
+
+הבעיה היא שקבצי Windows משתמשים ב-CRLF (\r\n) בעוד Linux צריך LF (\n) בלבד.
+
+**פתרונות:**
+1. השתמש ב-`deploy-direct.bat` או `deploy-safe.bat` שעוקפים את הבעיה
+2. או התקן dos2unix בשרת: `ssh root@31.97.129.5 "apt-get install -y dos2unix"`
 
 ### שגיאת 500/502
 ```bash

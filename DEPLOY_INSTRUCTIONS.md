@@ -8,6 +8,18 @@
 
 ## סקריפטים זמינים
 
+### 🚀 הסקריפט החדש שעושה הכל!
+```bash
+# סקריפט אחד שמתקן ופורס הכל אוטומטית
+fix-and-deploy-all.bat
+
+# גרסה סופר מהירה (שורה אחת)
+super-quick-fix.bat
+
+# בדיקה מקיפה של המערכת
+test-everything.bat
+```
+
 ### 1. פריסה מלאה (Windows)
 ```bash
 # הסקריפט הראשי (מתוקן לבעיית line endings)

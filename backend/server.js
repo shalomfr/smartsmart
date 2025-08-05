@@ -31,19 +31,8 @@ const APP_USERS = [
   }
 ];
 
-// Handle OPTIONS for CORS
-app.options('/api/app/login', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.sendStatus(200);
-});
-
 // Login endpoint for the application (not email)
 app.post('/api/app/login', async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   const { username, password } = req.body;
   
   // מחפש את המשתמש

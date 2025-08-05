@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
       // אם אתה בשרת, החלף ל-IP של השרת
       const API_URL = window.location.hostname === 'localhost' 
         ? 'http://localhost:3001' 
-        : 'http://31.97.129.5/api';
+        : 'http://31.97.129.5:3003/api';
       
       const response = await fetch(`${API_URL}/app/login`, {
         method: 'POST',

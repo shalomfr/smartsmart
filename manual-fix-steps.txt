@@ -1,67 +1,33 @@
-========================================
-   הוראות ידניות לתיקון השרת
-========================================
+****************************************************
+         תיקון ידני פשוט - 3 צעדים
+****************************************************
 
-שלב 1: פתח טרמינל חדש (CMD או PowerShell)
+צעד 1: ערוך את הקובץ src\contexts\AuthContext.jsx
+===================================================
 
-שלב 2: התחבר לשרת:
-ssh root@31.97.129.5
+מצא את השורה (בערך שורה 33-35):
+  const API_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:3001/api' 
+    : '/api';
 
-שלב 3: אחרי שהתחברת, העתק והדבק כל פקודה בנפרד:
+החלף ל:
+  const API_URL = 'http://31.97.129.5:4000/api';
 
-# עבור לתיקיית המשתמש
-cd /home/emailapp
 
-# בדוק מה יש בתיקייה
-ls -la
+צעד 2: העלה לשרת
+=================
+הפעל בטרמינל:
+scp src/contexts/AuthContext.jsx root@31.97.129.5:/home/emailapp/site2/src/contexts/
 
-# אם יש תיקיית email-app, מחק אותה
-rm -rf email-app
 
-# הורד מחדש מגיטהאב
-git clone https://github.com/shalomfr/smartsmart.git email-app
+צעד 3: בנה מחדש בשרת
+======================
+ssh root@31.97.129.5 "cd /home/emailapp/site2 && npm run build && pm2 restart site2-frontend"
 
-# כנס לתיקייה
-cd email-app
 
-# התקן תלויות של ה-frontend
-npm install
+זהו! עכשיו היכנס עם:
+======================
+כתובת: http://31.97.129.5:8082
 
-# בנה את ה-frontend
-npm run build
-
-# כנס לתיקיית backend
-cd backend
-
-# התקן תלויות של ה-backend
-npm install
-
-# צור קובץ הגדרות
-echo "PORT=3001" > .env
-
-# חזור לתיקייה הראשית
-cd ..
-
-# עצור את כל התהליכים הישנים
-pm2 stop all
-pm2 delete all
-
-# הפעל את ה-backend
-cd backend
-pm2 start server.js --name email-app-backend
-
-# חזור לתיקייה הראשית
-cd ..
-
-# הפעל את ה-frontend
-pm2 serve dist 8080 --name email-app-frontend --spa
-
-# שמור את ההגדרות
-pm2 save
-
-# בדוק שהכל עובד
-pm2 status
-
-========================================
-אם משהו נכשל, שלח לי את השגיאה!
-========================================
+שם משתמש: admin
+סיסמה: 123456

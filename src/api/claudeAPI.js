@@ -1,11 +1,11 @@
-// Claude AI API Integration
+﻿// Claude AI API Integration
 
-const API_URL = '/api';
+const API_URL = 'http://31.97.129.5:4000http://31.97.129.5:4000http://31.97.129.5:4000/api';
 
 // Get API key from localStorage
 const getClaudeApiKey = () => localStorage.getItem('claudeApiKey');
 
-// הגדרות AI מותאמות אישית
+// ׳”׳’׳“׳¨׳•׳× AI ׳׳•׳×׳׳׳•׳× ׳׳™׳©׳™׳×
 const getAISettings = () => {
   const settings = localStorage.getItem('aiTrainingSettings');
   if (settings) {
@@ -34,10 +34,10 @@ export const claudeAPI = async (prompt, system = '') => {
   const apiKey = getClaudeApiKey();
   
   if (!apiKey) {
-    throw new Error('לא הוגדר מפתח API של Claude. אנא הגדר בהגדרות.');
+    throw new Error('׳׳ ׳”׳•׳’׳“׳¨ ׳׳₪׳×׳— API ׳©׳ Claude. ׳׳ ׳ ׳”׳’׳“׳¨ ׳‘׳”׳’׳“׳¨׳•׳×.');
   }
 
-  // שלב את ה-system prompt המותאם אישית
+  // ׳©׳׳‘ ׳׳× ׳”-system prompt ׳”׳׳•׳×׳׳ ׳׳™׳©׳™׳×
   const customSystemPrompt = localStorage.getItem('claudeSystemPrompt');
   const finalSystemPrompt = customSystemPrompt ? 
     `${customSystemPrompt}\n\n${system}` : system;
@@ -57,7 +57,7 @@ export const claudeAPI = async (prompt, system = '') => {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'שגיאה בקריאה ל-Claude API');
+      throw new Error(error.error || '׳©׳’׳™׳׳” ׳‘׳§׳¨׳™׳׳” ׳-Claude API');
     }
 
     const data = await response.json();
@@ -68,12 +68,12 @@ export const claudeAPI = async (prompt, system = '') => {
   }
 };
 
-// פונקציות עזר לפיצ'רים ספציפיים
+// ׳₪׳•׳ ׳§׳¦׳™׳•׳× ׳¢׳–׳¨ ׳׳₪׳™׳¦'׳¨׳™׳ ׳¡׳₪׳¦׳™׳₪׳™׳™׳
 export const generateSmartReply = async (emailContent) => {
   const apiKey = getClaudeApiKey();
   
   if (!apiKey) {
-    throw new Error('לא הוגדר מפתח API של Claude. אנא הגדר בהגדרות.');
+    throw new Error('׳׳ ׳”׳•׳’׳“׳¨ ׳׳₪׳×׳— API ׳©׳ Claude. ׳׳ ׳ ׳”׳’׳“׳¨ ׳‘׳”׳’׳“׳¨׳•׳×.');
   }
 
   const settings = getAISettings();
@@ -95,7 +95,7 @@ export const generateSmartReply = async (emailContent) => {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'שגיאה ביצירת תשובה חכמה');
+      throw new Error(error.error || '׳©׳’׳™׳׳” ׳‘׳™׳¦׳™׳¨׳× ׳×׳©׳•׳‘׳” ׳—׳›׳׳”');
     }
 
     const data = await response.json();
@@ -110,7 +110,7 @@ export const generateSubject = async (emailBody) => {
   const apiKey = getClaudeApiKey();
   
   if (!apiKey) {
-    throw new Error('לא הוגדר מפתח API של Claude. אנא הגדר בהגדרות.');
+    throw new Error('׳׳ ׳”׳•׳’׳“׳¨ ׳׳₪׳×׳— API ׳©׳ Claude. ׳׳ ׳ ׳”׳’׳“׳¨ ׳‘׳”׳’׳“׳¨׳•׳×.');
   }
 
   const settings = getAISettings();
@@ -132,7 +132,7 @@ export const generateSubject = async (emailBody) => {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'שגיאה ביצירת כותרת');
+      throw new Error(error.error || '׳©׳’׳™׳׳” ׳‘׳™׳¦׳™׳¨׳× ׳›׳•׳×׳¨׳×');
     }
 
     const data = await response.json();
@@ -147,7 +147,7 @@ export const improveEmail = async (emailContent, style) => {
   const apiKey = getClaudeApiKey();
   
   if (!apiKey) {
-    throw new Error('לא הוגדר מפתח API של Claude. אנא הגדר בהגדרות.');
+    throw new Error('׳׳ ׳”׳•׳’׳“׳¨ ׳׳₪׳×׳— API ׳©׳ Claude. ׳׳ ׳ ׳”׳’׳“׳¨ ׳‘׳”׳’׳“׳¨׳•׳×.');
   }
 
   const settings = getAISettings();
@@ -170,7 +170,7 @@ export const improveEmail = async (emailContent, style) => {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'שגיאה בשיפור המייל');
+      throw new Error(error.error || '׳©׳’׳™׳׳” ׳‘׳©׳™׳₪׳•׳¨ ׳”׳׳™׳™׳');
     }
 
     const data = await response.json();

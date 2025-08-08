@@ -18,6 +18,34 @@ import { generateSmartReply } from '../api/claudeAPI';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 
+// פונקציית עזר לפענוח Base64
+const decodeBase64 = (str) => {
+  if (!str) return '';
+  try {
+    // בדוק אם המחרוזת היא Base64 תקינה
+    // Regex משוכלל יותר שמתמודד עם padding
+    const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+    if (base64Regex.test(str)) {
+      const decoded = atob(str);
+      // UTF-8 decode
+      const utf8Decoded = new TextDecoder('utf-8').decode(
+        Uint8Array.from(decoded, c => c.charCodeAt(0))
+      );
+      
+      // ודא שהתוצאה היא טקסט קריא (למשל, מכילה HTML או פשוט טקסט)
+      // נבדוק אם יש תווים בעברית כדי להיות בטוחים
+      if (/[א-ת]/.test(utf8Decoded) || utf8Decoded.includes('<div')) {
+        return utf8Decoded;
+      }
+      return decoded; // אם לא עברית, החזר את הפענוח הרגיל
+    }
+  } catch (e) {
+    console.error("Failed to decode Base64 string:", e);
+  }
+  return str; // החזר את המחרוזת המקורית אם היא לא Base64
+};
+
+
 const folderNames = {
   inbox: 'דואר נכנס',
   starred: 'מסומן בכוכב',
@@ -97,9 +125,13 @@ export default function InboxPage() {
       const fetchedEmails = await Email.filter({ folder });
       console.log('Fetched emails:', fetchedEmails);
       console.log('First email details:', fetchedEmails[0]);
-      setEmails(fetchedEmails);
+      // סינון מקומי עבור תיקיות לוגיות כגון "מסומן בכוכב"
+      const processed = Array.isArray(fetchedEmails)
+        ? (folder === 'starred' ? fetchedEmails.filter(e => e.is_starred) : fetchedEmails)
+        : [];
+      setEmails(processed);
       if (fetchedEmails.length > 0 && !selectedEmail) {
-        setSelectedEmail(fetchedEmails[0]);
+        setSelectedEmail(processed[0] || null);
       }
     } catch (error) {
       console.error('Error loading emails:', error);
@@ -111,6 +143,8 @@ export default function InboxPage() {
 
   const handleRefresh = () => {
     loadEmails();
+    // עדכן ספירות תיקיות
+    window.dispatchEvent(new Event('email-updated'));
   };
 
   const handleFilter = () => {
@@ -124,6 +158,7 @@ export default function InboxPage() {
   const handleStar = async (email) => {
     try {
       await Email.update(email.id, { is_starred: !email.is_starred });
+      window.dispatchEvent(new Event('email-updated'));
       loadEmails();
     } catch (error) {
       console.error('Error updating email:', error);
@@ -178,13 +213,62 @@ export default function InboxPage() {
       setReplyContent('');
       alert('התשובה נשלחה בהצלחה!');
       
-      // רענן את הרשימה
+      // רענן את הרשימה + עדכן ספירות תיקיות
       loadEmails();
+      window.dispatchEvent(new Event('email-updated'));
     } catch (error) {
       console.error('Error sending reply:', error);
       alert('שגיאה בשליחת התשובה: ' + error.message);
     } finally {
       setIsSendingReply(false);
+    }
+  };
+  
+  const handleSaveDraft = async () => {
+    if (!replyContent.trim() || !selectedEmail) return;
+    
+    try {
+      const sessionId = localStorage.getItem('emailSessionId');
+      const response = await fetch(window.location.hostname === 'localhost' ? '/api/drafts/save' : 'http://31.97.129.5:4000/api/drafts/save', {
+        method: 'POST',
+        headers: {
+          'Authorization': sessionId,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          originalEmail: {
+            id: selectedEmail.id,
+            from: selectedEmail.from,
+            from_name: selectedEmail.from_name,
+            subject: selectedEmail.subject,
+            body: selectedEmail.body,
+            date: selectedEmail.date,
+            messageId: selectedEmail.messageId
+          },
+          draftContent: replyContent,
+          subject: selectedEmail.subject.startsWith('Re: ') ? selectedEmail.subject : `Re: ${selectedEmail.subject}`
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (result.savedInGmail) {
+          // הודעת הצלחה לשמירה ב-Gmail
+          alert('🎯 הטיוטה נשמרה בהצלחה ב-Gmail המקורי!\n\nתוכל למצוא אותה בתיקיית הטיוטות של Gmail עם הנושא "[ממתין לשליחה]" למזהוי קל.');
+        } else {
+          alert('הטיוטה נשמרה בהצלחה!');
+        }
+        
+        // מעבר אוטומטי לתיקיית טיוטות
+        navigate('/PendingReplies');
+      } else {
+        const error = await response.json();
+        alert('שגיאה בשמירת הטיוטה: ' + (error.message || error.error));
+      }
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      alert('שגיאה בשמירת הטיוטה: ' + error.message);
     }
   };
 
@@ -297,7 +381,7 @@ export default function InboxPage() {
                     </h3>
                     
                     <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
-                      {email.body ? email.body.replace(/<[^>]*>/g, '') : ''}
+                      {decodeBase64(email.body || '').replace(/<[^>]*>/g, '')}
                     </p>
 
                     {email.labels && email.labels.length > 0 && (
@@ -412,7 +496,7 @@ export default function InboxPage() {
               >
                 <div 
                   className="prose prose-gray max-w-none leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: selectedEmail.body }}
+                  dangerouslySetInnerHTML={{ __html: decodeBase64(selectedEmail.body) }}
                 />
               </motion.div>
               
@@ -476,6 +560,16 @@ export default function InboxPage() {
                               שלח תשובה
                             </>
                           )}
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          onClick={handleSaveDraft}
+                          disabled={!replyContent.trim()}
+                          className="flex items-center gap-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200"
+                        >
+                          <ClipboardCheck className="w-4 h-4" />
+                          צור טיוטה
                         </Button>
                         
                         <Button

@@ -26,7 +26,24 @@ export default function SettingsPage() {
     smartReply: true,
     darkMode: false,
     language: 'he',
-    timezone: 'Asia/Jerusalem'
+    timezone: 'Asia/Jerusalem',
+    // Auto-Reply Settings
+    autoReplyEnabled: false,
+    autoReplyOnlyWorkHours: true,
+    autoReplyWorkStart: '09:00',
+    autoReplyWorkEnd: '17:00',
+    autoReplyWorkDays: [1, 2, 3, 4, 5], // Monday to Friday
+    autoReplyOnlyPersonal: true,
+    autoReplyTone: 'professional',
+    autoReplyLength: 'medium',
+    autoReplyCreativity: 0.7,
+    autoReplyBlacklist: '',
+    autoReplyWhitelist: '',
+    autoReplyMaxPerDay: 5,
+    autoReplyNoRepeat: true,
+    autoReplyExcludeAutomated: true,
+    autoReplyExcludeSpam: true,
+    autoReplyNotifications: true
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -34,6 +51,14 @@ export default function SettingsPage() {
   const [detectedProvider, setDetectedProvider] = useState(null);
   const [showProviderInfo, setShowProviderInfo] = useState(false);
   const [claudeApiKey, setClaudeApiKey] = useState(localStorage.getItem('claudeApiKey') || '');
+  
+  // Auto-reply statistics
+  const [autoReplyStats, setAutoReplyStats] = useState({
+    todayCount: 0,
+    totalAutoReplyDrafts: 0,
+    isMonitoring: false,
+    lastCheck: null
+  });
   
   // States for server settings
   const [masterPassword, setMasterPassword] = useState('');
@@ -44,7 +69,63 @@ export default function SettingsPage() {
   useEffect(() => {
     loadAccount();
     checkServerSettings();
-  }, []);
+    loadAutoReplySettings();
+    loadAutoReplyStats();
+    
+    // Update stats every 30 seconds if auto-reply is enabled
+    const interval = setInterval(() => {
+      if (preferences.autoReplyEnabled) {
+        loadAutoReplyStats();
+      }
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [preferences.autoReplyEnabled]);
+
+  // Load auto-reply settings from server
+  const loadAutoReplySettings = async () => {
+    try {
+      const sessionId = localStorage.getItem('emailSessionId');
+      if (!sessionId) return;
+
+      const response = await fetch(window.location.hostname === 'localhost' ? '/api/auto-reply/settings' : 'http://31.97.129.5:4000/api/auto-reply/settings', {
+        headers: {
+          'Authorization': sessionId
+        }
+      });
+
+      if (response.ok) {
+        const autoReplySettings = await response.json();
+        setPreferences(prev => ({
+          ...prev,
+          ...autoReplySettings
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading auto-reply settings:', error);
+    }
+  };
+
+  // Load auto-reply statistics from server
+  const loadAutoReplyStats = async () => {
+    try {
+      const sessionId = localStorage.getItem('emailSessionId');
+      if (!sessionId) return;
+
+      const response = await fetch(window.location.hostname === 'localhost' ? '/api/auto-reply/stats' : 'http://31.97.129.5:4000/api/auto-reply/stats', {
+        headers: {
+          'Authorization': sessionId
+        }
+      });
+
+      if (response.ok) {
+        const stats = await response.json();
+        setAutoReplyStats(stats);
+      }
+    } catch (error) {
+      console.error('Error loading auto-reply stats:', error);
+    }
+  };
   
   const checkServerSettings = async () => {
     const exists = await checkSettingsExist();
@@ -110,6 +191,44 @@ export default function SettingsPage() {
 
   const handlePreferenceChange = (field, value) => {
     setPreferences(prev => ({ ...prev, [field]: value }));
+    
+    // If it's an auto-reply setting, save it immediately to the server
+    if (field.startsWith('autoReply')) {
+      const newPrefs = { ...preferences, [field]: value };
+      saveAutoReplySettings(newPrefs);
+    }
+  };
+
+  // Save auto-reply settings to server
+  const saveAutoReplySettings = async (settings) => {
+    try {
+      const sessionId = localStorage.getItem('emailSessionId');
+      if (!sessionId) return;
+
+      // Extract only auto-reply settings
+      const autoReplySettings = {};
+      Object.keys(settings).forEach(key => {
+        if (key.startsWith('autoReply')) {
+          autoReplySettings[key] = settings[key];
+        }
+      });
+
+      const response = await fetch(window.location.hostname === 'localhost' ? '/api/auto-reply/settings' : 'http://31.97.129.5:4000/api/auto-reply/settings', {
+        method: 'POST',
+        headers: {
+          'Authorization': sessionId,
+          'Content-Type': 'application/json',
+          'X-Claude-Api-Key': claudeApiKey || localStorage.getItem('claudeApiKey') || ''
+        },
+        body: JSON.stringify(autoReplySettings)
+      });
+
+      if (response.ok) {
+        console.log('Auto-reply settings saved successfully');
+      }
+    } catch (error) {
+      console.error('Error saving auto-reply settings:', error);
+    }
   };
 
   const handleSave = async () => {
@@ -745,7 +864,7 @@ export default function SettingsPage() {
                   </motion.div>
                 </div>
                 <p className="text-xs text-gray-500 mt-3">
-                  * זוהי הדגמה - החיבור האמיתי אינו פעיל
+                  * החיבור מתבצע בפועל דרך ה-Backend. ודא שהשרת פעיל ושמורה סשן התחברות.
                 </p>
               </div>
             </CardContent>
@@ -887,6 +1006,302 @@ export default function SettingsPage() {
                   <strong>💡 טיפ:</strong> גם אם הספק שלך לא ברשימה, המערכת תנסה לזהות את ההגדרות הנכונות על בסיס הדומיין.
                 </p>
               </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Auto-Reply Settings Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.0 }}
+          className="w-full"
+        >
+          <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-100">
+                  <Zap className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-right text-purple-800">🤖 תשובה אוטומטית חכמה</CardTitle>
+                  <CardDescription className="text-right text-purple-600">
+                    המערכת תיצור תשובות חכמות אוטומטיות למיילים נכנסים ותשמר אותן כטיוטות
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              {/* הפעלה כללית */}
+              <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-purple-100">
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={preferences.autoReplyEnabled}
+                    onCheckedChange={(checked) => handlePreferenceChange('autoReplyEnabled', checked)}
+                  />
+                  <div>
+                    <Label className="font-medium text-purple-800">הפעל תשובה אוטומטית</Label>
+                    <p className="text-sm text-purple-600">המערכת תיצור תשובות אוטומטיות למיילים חדשים</p>
+                  </div>
+                </div>
+                <div className={`p-2 rounded-full ${preferences.autoReplyEnabled ? 'bg-green-100' : 'bg-gray-100'}`}>
+                  {preferences.autoReplyEnabled ? (
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-gray-400" />
+                  )}
+                </div>
+              </div>
+
+              {preferences.autoReplyEnabled && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  {/* הגדרות זמן */}
+                  <div className="bg-white p-4 rounded-lg border border-purple-100">
+                    <h4 className="font-medium text-purple-800 mb-4 flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      הגדרות זמן
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label>רק בשעות עבודה</Label>
+                        <Switch
+                          checked={preferences.autoReplyOnlyWorkHours}
+                          onCheckedChange={(checked) => handlePreferenceChange('autoReplyOnlyWorkHours', checked)}
+                        />
+                      </div>
+                      
+                      {preferences.autoReplyOnlyWorkHours && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>שעת התחלה</Label>
+                            <Input
+                              type="time"
+                              value={preferences.autoReplyWorkStart}
+                              onChange={(e) => handlePreferenceChange('autoReplyWorkStart', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label>שעת סיום</Label>
+                            <Input
+                              type="time"
+                              value={preferences.autoReplyWorkEnd}
+                              onChange={(e) => handlePreferenceChange('autoReplyWorkEnd', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* הגדרות AI */}
+                  <div className="bg-white p-4 rounded-lg border border-purple-100">
+                    <h4 className="font-medium text-purple-800 mb-4 flex items-center gap-2">
+                      <Zap className="w-4 h-4" />
+                      הגדרות AI
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <Label>טון התשובה</Label>
+                        <select
+                          value={preferences.autoReplyTone}
+                          onChange={(e) => handlePreferenceChange('autoReplyTone', e.target.value)}
+                          className="w-full p-2 border rounded-md"
+                        >
+                          <option value="professional">מקצועי</option>
+                          <option value="friendly">ידידותי</option>
+                          <option value="formal">פורמלי</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <Label>אורך התשובה</Label>
+                        <select
+                          value={preferences.autoReplyLength}
+                          onChange={(e) => handlePreferenceChange('autoReplyLength', e.target.value)}
+                          className="w-full p-2 border rounded-md"
+                        >
+                          <option value="short">קצר</option>
+                          <option value="medium">בינוני</option>
+                          <option value="long">ארוך</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <Label>רמת יצירתיות (0.1-1.0)</Label>
+                        <Input
+                          type="range"
+                          min="0.1"
+                          max="1.0"
+                          step="0.1"
+                          value={preferences.autoReplyCreativity}
+                          onChange={(e) => handlePreferenceChange('autoReplyCreativity', parseFloat(e.target.value))}
+                          className="w-full"
+                        />
+                        <div className="text-sm text-gray-600 text-center">{preferences.autoReplyCreativity}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* מנגנוני הגנה */}
+                  <div className="bg-white p-4 rounded-lg border border-purple-100">
+                    <h4 className="font-medium text-purple-800 mb-4 flex items-center gap-2">
+                      <Shield className="w-4 h-4" />
+                      מנגנוני הגנה
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label>רק למיילים אישיים</Label>
+                        <Switch
+                          checked={preferences.autoReplyOnlyPersonal}
+                          onCheckedChange={(checked) => handlePreferenceChange('autoReplyOnlyPersonal', checked)}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <Label>אל תענה פעמיים לאותו אדם</Label>
+                        <Switch
+                          checked={preferences.autoReplyNoRepeat}
+                          onCheckedChange={(checked) => handlePreferenceChange('autoReplyNoRepeat', checked)}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <Label>אל תענה על מיילים אוטומטיים</Label>
+                        <Switch
+                          checked={preferences.autoReplyExcludeAutomated}
+                          onCheckedChange={(checked) => handlePreferenceChange('autoReplyExcludeAutomated', checked)}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <Label>אל תענה על ספאם</Label>
+                        <Switch
+                          checked={preferences.autoReplyExcludeSpam}
+                          onCheckedChange={(checked) => handlePreferenceChange('autoReplyExcludeSpam', checked)}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label>מספר מקסימלי של תשובות ביום</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="50"
+                          value={preferences.autoReplyMaxPerDay}
+                          onChange={(e) => handlePreferenceChange('autoReplyMaxPerDay', parseInt(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* רשימות שחורות ולבנות */}
+                  <div className="bg-white p-4 rounded-lg border border-purple-100">
+                    <h4 className="font-medium text-purple-800 mb-4 flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      רשימות כתובות
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <Label>רשימה שחורה (כתובות לא לענות)</Label>
+                        <textarea
+                          value={preferences.autoReplyBlacklist}
+                          onChange={(e) => handlePreferenceChange('autoReplyBlacklist', e.target.value)}
+                          placeholder="הכנס כתובות מייל מופרדות בפסיקים או שורות חדשות"
+                          className="w-full p-2 border rounded-md h-20 resize-none"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label>רשימה לבנה (רק כתובות אלה יקבלו תשובה)</Label>
+                        <textarea
+                          value={preferences.autoReplyWhitelist}
+                          onChange={(e) => handlePreferenceChange('autoReplyWhitelist', e.target.value)}
+                          placeholder="השאר ריק לענות לכולם, או הכנס כתובות ספציפיות"
+                          className="w-full p-2 border rounded-md h-20 resize-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* התראות */}
+                  <div className="bg-white p-4 rounded-lg border border-purple-100">
+                    <h4 className="font-medium text-purple-800 mb-4 flex items-center gap-2">
+                      <Bell className="w-4 h-4" />
+                      התראות
+                    </h4>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label>התראה על יצירת טיוטה חדשה</Label>
+                      <Switch
+                        checked={preferences.autoReplyNotifications}
+                        onCheckedChange={(checked) => handlePreferenceChange('autoReplyNotifications', checked)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* סטטיסטיקות */}
+                  <div className="bg-white p-4 rounded-lg border border-purple-100">
+                    <h4 className="font-medium text-purple-800 mb-4 flex items-center gap-2">
+                      📊 סטטיסטיקות ומצב המערכת
+                    </h4>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
+                        <div className="text-2xl font-bold text-green-600">{autoReplyStats.todayCount}</div>
+                        <div className="text-sm text-green-700">תשובות היום</div>
+                      </div>
+                      
+                      <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="text-2xl font-bold text-blue-600">{autoReplyStats.totalAutoReplyDrafts}</div>
+                        <div className="text-sm text-blue-700">סה"כ טיוטות</div>
+                      </div>
+                      
+                      <div className="text-center p-3 bg-purple-50 rounded-lg border border-purple-200">
+                        <div className={`text-2xl font-bold ${autoReplyStats.isMonitoring ? 'text-green-600' : 'text-gray-400'}`}>
+                          {autoReplyStats.isMonitoring ? '🟢' : '🔴'}
+                        </div>
+                        <div className="text-sm text-purple-700">
+                          {autoReplyStats.isMonitoring ? 'פעיל' : 'לא פעיל'}
+                        </div>
+                      </div>
+                      
+                      <div className="text-center p-3 bg-orange-50 rounded-lg border border-orange-200">
+                        <div className="text-lg font-bold text-orange-600">
+                          {preferences.autoReplyMaxPerDay - autoReplyStats.todayCount}
+                        </div>
+                        <div className="text-sm text-orange-700">נותרו היום</div>
+                      </div>
+                    </div>
+                    
+                    {autoReplyStats.lastCheck && (
+                      <div className="mt-3 text-xs text-gray-500 text-center">
+                        בדיקה אחרונה: {new Date(autoReplyStats.lastCheck).toLocaleString('he-IL')}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* אזהרה */}
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>⚠️ שים לב:</strong> תכונה זו תיצור תשובות אוטומטיות בהתבסס על AI. 
+                      בדוק תמיד את הטיוטות לפני שליחה. המערכת תשמור הכל כטיוטות ולא תשלח אוטומטית.
+                      <br />
+                      <strong>🔄 עדכון:</strong> המערכת בודקת מיילים חדשים כל 2 דקות כשהיא מופעלת.
+                    </AlertDescription>
+                  </Alert>
+                </motion.div>
+              )}
             </CardContent>
           </Card>
         </motion.div>

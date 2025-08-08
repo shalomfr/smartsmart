@@ -1,22 +1,26 @@
 @echo off
-echo ========================================
-echo   פקודות פשוטות לתיקון השרת
-echo ========================================
+cls
+echo ════════════════════════════════════════════════════
+echo          פתרון פשוט - בלי סיבוכים
+echo ════════════════════════════════════════════════════
 echo.
-echo העתק כל פקודה והרץ בטרמינל:
+echo הבעיה: יש המון אתרים על השרת וחלקם לא עובדים
+echo הפתרון: פשוט נשתמש ב-site2 שכבר קיים!
 echo.
-echo 1. התחבר לשרת:
-echo    ssh root@31.97.129.5
+echo ════════════════════════════════════════════════════
 echo.
-echo 2. אחרי החיבור, הרץ:
-echo    cd /home/emailapp
-echo    rm -rf email-app
-echo    git clone https://github.com/shalomfr/smartsmart.git email-app
-echo    cd email-app
-echo    npm install
-echo    npm run build
-echo    cd backend
-echo    npm install
-echo    pm2 restart all
+pause
+
+REM רק מעדכן את הקבצים ומעלה אותם ל-site2 הקיים
+call FIX-ALL-URLS-LOCAL.bat
+call FIX-FRONTEND-CONNECTION.bat
+
+echo.
+echo ════════════════════════════════════════════════════
+echo.
+echo זהו! נסה עכשיו:
+echo http://31.97.129.5:8082
+echo.
+echo admin / 123456
 echo.
 pause

@@ -1,0 +1,42 @@
+פקודות לתיקון ידני של התוויות
+================================
+
+1. התחבר לשרת:
+ssh root@31.97.129.5
+
+2. עבור לתיקייה:
+cd /home/emailapp/site2/backend
+
+3. צור קובץ תיקון:
+cat > fix-labels-manual.js << 'ENDFIX'
+const fs = require('fs');
+let content = fs.readFileSync('server.js', 'utf8');
+
+// הוסף ניקוי סלאש
+content = content.replace(
+  "const upperLabel = label.toUpperCase();",
+  `// הסר סלאש מהסוף
+  if (label.endsWith('\\\\')) {
+    label = label.slice(0, -1);
+  }
+  const upperLabel = label.toUpperCase();`
+);
+
+// הוסף לוגים
+content = content.replace(
+  "if (attrs['x-gm-labels']) {",
+  "if (attrs['x-gm-labels']) {\n              console.log('Raw labels:', attrs['x-gm-labels']);"
+);
+
+fs.writeFileSync('server.js', content);
+console.log('Fixed!');
+ENDFIX
+
+4. הרץ את התיקון:
+node fix-labels-manual.js
+
+5. הפעל מחדש:
+pm2 restart site2-backend
+
+6. בדוק לוגים:
+pm2 logs site2-backend --lines 20

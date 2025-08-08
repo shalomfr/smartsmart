@@ -11,14 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 
 
-const folders = [
-  { name: 'דואר נכנס', icon: Inbox, folder: 'inbox', page: 'Inbox', count: 12, color: 'text-blue-600' },
-  { name: 'מסומן בכוכב', icon: Star, folder: 'starred', page: 'Inbox', count: 3, color: 'text-yellow-600' },
-  { name: 'נשלח', icon: Send, folder: 'sent', page: 'Inbox', count: 0, color: 'text-green-600' },
-  { name: 'טיוטות', icon: Edit, folder: 'drafts', page: 'Inbox', count: 1, color: 'text-gray-600' },
-  { name: 'זבל', icon: Archive, folder: 'junk', page: 'Inbox', count: 5, color: 'text-orange-600' },
-  { name: 'פח אשפה', icon: Trash2, folder: 'trash', page: 'Inbox', count: 0, color: 'text-red-600' },
-];
+
 
 const navigationPages = [
   { name: 'חיפוש מתקדם', page: 'Search', icon: Search, color: 'text-blue-600' },
@@ -64,17 +57,115 @@ export default function Layout({ children, currentPageName }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [notifications] = useState(3);
+  const [pendingRepliesCount, setPendingRepliesCount] = useState(0);
+  const [folderCounts, setFolderCounts] = useState({
+    inboxUnread: 0,
+    starredInInbox: 0,
+    sent: 0,
+    drafts: 0,
+    junk: 0,
+    trash: 0,
+  });
   const { user, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+  
+  // טען את מספר הטיוטות הממתינות
+  useEffect(() => {
+    const loadPendingRepliesCount = async () => {
+      try {
+        const sessionId = localStorage.getItem('emailSessionId');
+        if (sessionId) {
+          const response = await fetch('/api/drafts', {
+            headers: {
+              'Authorization': sessionId
+            }
+          });
+          
+          if (response.ok) {
+            const drafts = await response.json();
+            setPendingRepliesCount(drafts.length);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading drafts count:', error);
+      }
+    };
+    
+    loadPendingRepliesCount();
+    // רענן כל 30 שניות
+    const interval = setInterval(loadPendingRepliesCount, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // טען ספירות תיקיות באופן דינמי
+  useEffect(() => {
+    const loadFolderCounts = async () => {
+      try {
+        const sessionId = localStorage.getItem('emailSessionId');
+        if (!sessionId) return;
+
+        const headers = { Authorization: sessionId };
+
+        const [inboxRes, sentRes, draftsRes] = await Promise.all([
+          fetch('/api/emails/inbox', { headers }),
+          fetch('/api/emails/sent', { headers }),
+          fetch('/api/emails/drafts', { headers })
+        ]);
+
+        const [inboxEmails, sentEmails, draftEmails] = await Promise.all([
+          inboxRes.ok ? inboxRes.json() : [],
+          sentRes.ok ? sentRes.json() : [],
+          draftsRes.ok ? draftsRes.json() : []
+        ]);
+
+        const inboxUnread = Array.isArray(inboxEmails)
+          ? inboxEmails.filter(e => !e.is_read).length
+          : 0;
+        const starredInInbox = Array.isArray(inboxEmails)
+          ? inboxEmails.filter(e => e.is_starred).length
+          : 0;
+
+        setFolderCounts({
+          inboxUnread,
+          starredInInbox,
+          sent: Array.isArray(sentEmails) ? sentEmails.length : 0,
+          drafts: Array.isArray(draftEmails) ? draftEmails.length : 0,
+          junk: 0,
+          trash: 0,
+        });
+      } catch (err) {
+        console.error('Error loading folder counts:', err);
+      }
+    };
+
+    loadFolderCounts();
+    const interval = setInterval(loadFolderCounts, 30000);
+
+    // רענון מידי כשיש עדכון במיילים
+    const onEmailUpdated = () => loadFolderCounts();
+    window.addEventListener('email-updated', onEmailUpdated);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('email-updated', onEmailUpdated);
+    };
+  }, []);
 
   const isActive = (page, folder) => {
     const searchParams = new URLSearchParams(location.search);
     const currentFolder = searchParams.get('folder') || 'inbox';
     const currentPath = location.pathname.replace('/', '');
+    
+    // עבור PendingReplies, בדוק רק את הנתיב
+    if (page === 'PendingReplies') {
+      return currentPath.toLowerCase() === page.toLowerCase();
+    }
+    
     return currentPath.toLowerCase() === page.toLowerCase() && currentFolder === folder;
   };
 
@@ -83,6 +174,17 @@ export default function Layout({ children, currentPageName }) {
           navigate(`/Search?q=${searchQuery}`);
       }
   }
+  
+  // הגדרת התיקיות עם ספירה דינמית
+  const folders = [
+    { name: 'דואר נכנס', icon: Inbox, folder: 'inbox', page: 'Inbox', count: folderCounts.inboxUnread, color: 'text-blue-600' },
+    { name: 'מסומן בכוכב', icon: Star, folder: 'starred', page: 'Inbox', count: folderCounts.starredInInbox, color: 'text-yellow-600' },
+    { name: 'בהמתנה לתשובה', icon: ClipboardCheck, folder: 'pending-replies', page: 'PendingReplies', count: pendingRepliesCount, color: 'text-purple-600' },
+    { name: 'נשלח', icon: Send, folder: 'sent', page: 'Inbox', count: folderCounts.sent, color: 'text-green-600' },
+    { name: 'טיוטות', icon: Edit, folder: 'drafts', page: 'Inbox', count: folderCounts.drafts, color: 'text-gray-600' },
+    { name: 'זבל', icon: Archive, folder: 'junk', page: 'Inbox', count: folderCounts.junk, color: 'text-orange-600' },
+    { name: 'פח אשפה', icon: Trash2, folder: 'trash', page: 'Inbox', count: folderCounts.trash, color: 'text-red-600' },
+  ];
 
   const SidebarContent = () => (
     <motion.div 

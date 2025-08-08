@@ -1,0 +1,3 @@
+@echo off
+echo מתחבר לשרת...
+ssh root@31.97.129.5

@@ -1,3 +1,23 @@
+## הפעלה מהירה
+
+יש שתי אפשרויות:
+
+1) מצב פיתוח (Hot reload):
+
+```
+START_ALL.bat
+```
+
+זה מפעיל Backend על פורט 4000 ו-Frontend (Vite dev) על 5173, ופותח דפדפן.
+
+2) בנייה והפעלה מהבנייה (Preview):
+
+```
+BUILD-AND-START.bat
+```
+
+הסקריפט יתקין תלויות, יבנה את ה-Frontend ויפעיל Vite Preview על 5173, וה-Backend ירוץ על 4000.
+
 # Base44 App
 
 

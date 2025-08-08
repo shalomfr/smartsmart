@@ -1,0 +1,48 @@
+// שלוף תוויות Gmail
+if (attrs['x-gm-labels']) {
+  console.log('Gmail labels:', attrs['x-gm-labels']);
+  
+  email.labels = [];
+  
+  for (let label of attrs['x-gm-labels']) {
+    // נקה את התווית
+    label = String(label).trim();
+    
+    // הסר סלאש מהסוף
+    if (label.endsWith('\\')) {
+      label = label.slice(0, -1);
+    }
+    
+    // דלג על תוויות עם קודים
+    if (label.includes('&') || label.startsWith('-') || label.length > 30) {
+      continue;
+    }
+    
+    // תרגומים
+    const lowerLabel = label.toLowerCase();
+    
+    if (lowerLabel === 'important') {
+      email.labels.push('חשוב');
+    } else if (lowerLabel === 'inbox') {
+      email.labels.push('דואר נכנס');
+    } else if (lowerLabel === 'sent') {
+      email.labels.push('נשלח');
+    } else if (lowerLabel === 'starred') {
+      email.labels.push('מסומן בכוכב');
+    } else if (lowerLabel === 'category_social') {
+      email.labels.push('רשתות חברתיות');
+    } else if (lowerLabel === 'category_promotions') {
+      email.labels.push('מבצעים');
+    } else if (lowerLabel === 'category_updates') {
+      email.labels.push('עדכונים');
+    } else if (label.length <= 15) {
+      email.labels.push(label);
+    }
+  }
+  
+  console.log('Final labels:', email.labels);
+} else {
+  email.labels = ['ללא תוויות'];
+}
+
+attributesSet = true;

@@ -86,23 +86,15 @@ export default function ComposePage() {
 
     setIsSending(true);
     try {
-      // קח את כתובת השולח מהחשבון השמור
-      const userEmail = localStorage.getItem('emailAccount') || 'user@example.com';
-      
+      // שלח בפועל דרך ה-API האמיתי (SMTP + Append ל-"נשלח")
       await Email.create({
-        from: userEmail,
-        from_name: 'אני',
         to: email.to,
-        cc: email.cc || [],
-        bcc: email.bcc || [],
         subject: email.subject,
         body: email.body,
-        date: new Date().toISOString(),
-        folder: 'sent',
-        is_read: true,
-        priority: email.priority
       });
 
+      // עדכן מונים והעבר ל"נשלח"
+      window.dispatchEvent(new Event('email-updated'));
       navigate('/Inbox?folder=sent');
     } catch (error) {
       console.error('Error sending email:', error);
@@ -114,17 +106,26 @@ export default function ComposePage() {
 
   const handleSaveDraft = async () => {
     try {
-      await Email.create({
-        from: 'user@example.com',
-        from_name: 'אני',
-        to: email.to || [],
-        subject: email.subject || 'ללא נושא',
-        body: email.body || '',
-        date: new Date().toISOString(),
-        folder: 'drafts',
-        is_read: true
+      // שמור טיוטה אמיתית דרך השרת (נשמרת בצד שרת/או בג׳ימייל ע"פ מימוש backend)
+      const sessionId = localStorage.getItem('emailSessionId');
+      const response = await fetch(window.location.hostname === 'localhost' ? '/api/drafts/save' : 'http://31.97.129.5:4000/api/drafts/save', {
+        method: 'POST',
+        headers: {
+          'Authorization': sessionId,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          draftContent: email.body || '',
+          subject: email.subject || 'ללא נושא',
+          to: email.to || []
+        })
       });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || err.error || 'Draft save failed');
+      }
 
+      window.dispatchEvent(new Event('email-updated'));
       navigate('/Inbox?folder=drafts');
     } catch (error) {
       console.error('Error saving draft:', error);

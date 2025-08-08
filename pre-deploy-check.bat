@@ -1,88 +1,49 @@
 @echo off
-REM ==========================================
-REM Pre-deployment check script
-REM ==========================================
-
-echo.
-echo ===================================
-echo   Pre-Deployment Check
-echo ===================================
+chcp 65001 >nul
+cls
+echo ================================================
+echo      בדיקה לפני העלאה
+echo ================================================
 echo.
 
-REM Check Git status
-echo [1/5] Checking Git status...
-git status --porcelain > nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] Not a git repository!
-    echo Please run: git init
-    pause
-    exit /b 1
-)
-echo [OK] Git repository found
-
-REM Check if there are changes to commit
-git status --porcelain | findstr . > nul
-if errorlevel 1 (
-    echo [WARNING] No changes to commit
-) else (
-    echo [OK] Changes detected
-)
-
-REM Check SSH connection
-echo.
-echo [2/5] Testing SSH connection to server...
-ssh -o ConnectTimeout=5 root@31.97.129.5 "echo 'SSH connection successful'" > nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] Cannot connect to server via SSH!
-    echo Please check your SSH key and network connection
-    pause
-    exit /b 1
-)
-echo [OK] SSH connection successful
-
-REM Check server services
-echo.
-echo [3/5] Checking server services...
-ssh root@31.97.129.5 "pm2 status" > nul 2>&1
-if errorlevel 1 (
-    echo [WARNING] PM2 might not be running properly
-) else (
-    echo [OK] PM2 is running
-)
-
-REM Check Nginx
-echo.
-echo [4/5] Checking Nginx...
-ssh root@31.97.129.5 "nginx -t" > nul 2>&1
-if errorlevel 1 (
-    echo [WARNING] Nginx configuration might have issues
-) else (
-    echo [OK] Nginx configuration is valid
-)
-
-REM Check disk space
-echo.
-echo [5/5] Checking server disk space...
-ssh root@31.97.129.5 "df -h /home/emailapp | tail -1 | awk '{print $5}' | sed 's/%%//'" > temp_disk.txt
-set /p disk_usage=<temp_disk.txt
-del temp_disk.txt
-
-if %disk_usage% GTR 90 (
-    echo [WARNING] Disk usage is at %disk_usage%%%!
-    echo Consider cleaning up before deployment
-) else (
-    echo [OK] Disk usage is at %disk_usage%%%
-)
+echo [1] בודק קבצים קריטיים...
+echo ===========================
+if not exist "src\contexts\AuthContext.jsx" echo חסר: AuthContext.jsx & goto error
+if not exist "backend\server.js" echo חסר: server.js & goto error
+if not exist "src\pages\PendingReplies.jsx" echo חסר: PendingReplies.jsx & goto error
+if not exist "package.json" echo חסר: package.json & goto error
+echo ✓ כל הקבצים קיימים
 
 echo.
-echo ===================================
-echo   Pre-deployment check complete!
-echo ===================================
-echo.
-echo All systems are ready for deployment.
-echo You can now run one of the deployment scripts:
-echo - deploy-to-github-and-vps.bat
-echo - deploy-complete.ps1
-echo.
+echo [2] בודק תוכן קבצים...
+echo =======================
+findstr /C:"admin" backend\server.js >nul || echo אזהרה: אין משתמש admin
+findstr /C:"בהמתנה לתשובה" src\pages\Layout.jsx >nul || echo אזהרה: חסר בהמתנה לתשובה
+findstr /C:"צור טיוטה" src\pages\Inbox.jsx >nul || echo אזהרה: חסר כפתור טיוטה
 
+echo.
+echo [3] בודק חיבור לשרת...
+echo =======================
+ping -n 1 31.97.129.5 >nul && echo ✓ השרת זמין || echo ✗ אין חיבור לשרת & goto error
+
+echo.
+echo [4] בודק מקום בשרת...
+echo ======================
+ssh root@31.97.129.5 "df -h | grep -E '(/$|/home)'" 2>nul || echo אזהרה: לא יכול לבדוק מקום
+
+echo.
+echo ================================================
+echo ✅ הכל מוכן להעלאה!
+echo.
+echo הפעל: START-FRESH.bat
+echo ================================================
+echo.
 pause
+exit /b 0
+
+:error
+echo.
+echo ❌ יש בעיות! תקן אותן לפני ההעלאה.
+echo.
+pause
+exit /b 1

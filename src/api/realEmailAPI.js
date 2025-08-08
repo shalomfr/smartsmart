@@ -1,6 +1,8 @@
 // Real Email API - מחליף את MockAPI עבור מיילים אמיתיים
 
-const API_URL = '/api';
+const API_URL = (typeof window !== 'undefined' && window.location.hostname === 'localhost')
+  ? '/api'
+  : 'http://31.97.129.5:4000/api';
 
 // Helper to get session ID from localStorage
 const getSessionId = () => localStorage.getItem('emailSessionId');
@@ -117,3 +119,6 @@ export const Account = {
 
 // Keep mock data for other features (contacts, tasks, etc.)
 export { Contact, Task, Rule, Template, Label } from '../components/MockAPI';
+ 
+// Export for PendingReplies 
+export const realEmailAPI = Account; 

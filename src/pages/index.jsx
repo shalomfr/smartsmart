@@ -18,6 +18,8 @@ import Search from "./Search";
 
 import AITraining from "./AITraining";
 
+import PendingReplies from "./PendingReplies";
+
 import Login from "./Login";
 
 import ProtectedRoute from "../components/ProtectedRoute";
@@ -43,6 +45,8 @@ const PAGES = {
     Search: Search,
     
     AITraining: AITraining,
+    
+    PendingReplies: PendingReplies,
     
 }
 
@@ -135,6 +139,12 @@ function PagesContent() {
                 <Route path="/AITraining" element={
                     <ProtectedRoute>
                         <AITraining />
+                    </ProtectedRoute>
+                } />
+                
+                <Route path="/PendingReplies" element={
+                    <ProtectedRoute>
+                        <PendingReplies />
                     </ProtectedRoute>
                 } />
                 

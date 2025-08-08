@@ -1,11 +1,11 @@
-// Settings API - שמירה וטעינה של הגדרות מהשרת
+﻿// Settings API - ׳©׳׳™׳¨׳” ׳•׳˜׳¢׳™׳ ׳” ׳©׳ ׳”׳’׳“׳¨׳•׳× ׳׳”׳©׳¨׳×
 
-const API_URL = '/api';
+const API_URL = 'http://31.97.129.5:4000http://31.97.129.5:4000http://31.97.129.5:4000/api';
 
-// בדוק אם קיימות הגדרות שמורות
+// ׳‘׳“׳•׳§ ׳׳ ׳§׳™׳™׳׳•׳× ׳”׳’׳“׳¨׳•׳× ׳©׳׳•׳¨׳•׳×
 export const checkSettingsExist = async () => {
   try {
-    const response = await fetch(`${API_URL}/settings/exists`);
+    const response = await fetch(`http://31.97.129.5:4000http://31.97.129.5:4000http://31.97.129.5:4000/api/settings/exists`);
     const data = await response.json();
     return data.exists;
   } catch (error) {
@@ -14,10 +14,10 @@ export const checkSettingsExist = async () => {
   }
 };
 
-// שמור הגדרות
+// ׳©׳׳•׳¨ ׳”׳’׳“׳¨׳•׳×
 export const saveSettings = async (settings, masterPassword) => {
   try {
-    const response = await fetch(`${API_URL}/settings/save`, {
+    const response = await fetch(`http://31.97.129.5:4000http://31.97.129.5:4000http://31.97.129.5:4000/api/settings/save`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ settings, masterPassword })
@@ -34,10 +34,10 @@ export const saveSettings = async (settings, masterPassword) => {
   }
 };
 
-// טען הגדרות
+// ׳˜׳¢׳ ׳”׳’׳“׳¨׳•׳×
 export const loadSettings = async (masterPassword) => {
   try {
-    const response = await fetch(`${API_URL}/settings/load`, {
+    const response = await fetch(`http://31.97.129.5:4000http://31.97.129.5:4000http://31.97.129.5:4000/api/settings/load`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ masterPassword })
